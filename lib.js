@@ -133,6 +133,7 @@
 	}
 	window["yc"]["removeEvent"]=removeEvent;
 
+    /*
 	function addLoadEvent(func){
 		var oldOnLoad=window.onload;
 		if(typeof window.onload!='function'){
@@ -144,6 +145,50 @@
 			}
 		}
 	}
+	*/
+function addLoadEvent(loadEvent,waitForImages) {
+    if(!isCompatible()) return false;
+    
+    //如果为true, 则可以调用原始的 addEvent()
+    if(waitForImages) {
+        return addEvent(window, 'load', loadEvent);
+    }
+    var init = function() {
+		//如果这个函数已经被调用过一次了，则返回
+        if (arguments.callee.done) return;
+		//标记这个函数已经被运行过了. 
+        arguments.callee.done = true;
+		//相当于调用了document.loadEvent(), 即在document环境中运行载入事件. 
+        loadEvent.apply(document,arguments);
+    };
+    
+    // 如果浏览器中存在addEventListener()， 则使用DOMContentLoaded事件，该事件会在文档标记加载完成时调用. 
+    if (document.addEventListener) {
+        document.addEventListener("DOMContentLoaded", init, false);
+    }
+    
+    //  对于 safari浏览器，则使用 setInterval()函数周期性地检查document的readyState属性,随时监控文档是否载入完成 。 
+    if (/WebKit/i.test(navigator.userAgent)) {
+        var _timer = setInterval(function() {
+            if (/loaded|complete/.test(document.readyState)) {
+                clearInterval(_timer);
+                init();
+            }
+        },10);
+    }
+    // 而对于ie浏览器，则在文档中加入一个新的script标签，但该标签会延迟到文档最后载入。 然后使用script对象的onreadystatechange方法在进行类似的readystate检查后及时调用载入事件.
+    /*@cc_on @*/
+    /*@if (@_win32)
+    document.write("<script id=__ie_onload defer src=javascript:void(0)><\/script>");
+    var script = document.getElementById("__ie_onload");
+    script.onreadystatechange = function() {
+        if (this.readyState == "complete") {
+            init();
+        }
+    };
+    /*@end @*/
+    return true;
+}
 	window["yc"]["addLoadEvent"]=addLoadEvent;
 	
 	/**
@@ -181,7 +226,7 @@
 	window["yc"]["preventDefault"]=preventDefault;
 	
 	/**
-	获取事件的事件源
+	获取事件的事件源: 难点： ie没有提供target或currentTarget属性，但却提供了一个srcElement属性，而且safari中当dom元素包含一个文本节点时也会有问题。 在safari中，文本节点会代替包含它的元素变成事件的目标对象。 
 	*/
 	function getTarget( eventObject){
 		eventObject=eventObject||getEventObject(eventObject);	
@@ -206,7 +251,7 @@
 			'middle':false,
 			'right':false	
 		};
-		//检测eventObject的toString方法的返回值，w3c的dom对象的返回值为 MouseEvent
+		//检测eventObject的toString方法的返回值，w3c的mouse事件对象的toString()返回值为 MouseEvent
 		if( eventObject.toString&&eventObject.toString().indexOf( 'MouseEvent')!=-1 ){
 				//w3c方法
 				switch( eventObject.button){
@@ -216,7 +261,7 @@
 					default: break;	
 				}
 		}else if( eventObject.button){
-			// MSIE method
+			// MSIE method: ie的按键更复杂一些。 如0表示没有键按下，其它如下。 
 			switch(eventObject.button) {
 				case 1: buttons.left = true; break;
 				case 2: buttons.right = true; break;
@@ -248,7 +293,8 @@
 	window['yc']['getMouseButton']=getMouseButton;
 	
 /**
- * 获取文档中指针的位置
+ * 获取鼠标的位置(相对于文档原点，而不是相对于屏幕或浏览器窗口的位置）：
+ 虽然ie和w3c都定义了clientX和clientY属性，但它们在确定针对浏览器滚动后的位移属性时却各有不同。w3c使用document.documentElement.scrollTop,而ie使用document.body.scrollTop. 同样是这种情况safari将位置信息放在了事件的pageX和pageY中. 
  */
 function getPointerPositionInDocument(eventObject) {
     eventObject = eventObject || getEventObject(eventObject);
