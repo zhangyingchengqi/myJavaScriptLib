@@ -145,10 +145,152 @@
 		}
 	}
 	window["yc"]["addLoadEvent"]=addLoadEvent;
+	
+	/**
+	获取事件对象
+	*/
+	function getEventObject( W3CEvent ){
+		return W3CEvent||window.event;	
+	}
+	window["yc"]["getEventObject"]=getEventObject;
+	
+	/**
+	阻止冒泡
+	*/
+	function stopPropagation( eventObject ){
+		eventObject=eventObject||getEventObject( eventObject );	
+		if( eventObject.stopPropagation ){
+			eventObject.stopPropagation();	
+		}else{
+			eventObject.cancelBubble=true;	
+		}
+	}
+	window["yc"]["stopPropagation"]=stopPropagation;
+	
+	/**
+	阻止默认事件流
+	*/
+	function preventDefault( eventObject ){
+		eventObject=eventObject||getEventObject( eventObject);
+		if( eventObject.preventDefault ){
+			eventObject.preventDefault();	
+		}else{
+			eventObject.returnValue=false;	
+		}
+	}
+	window["yc"]["preventDefault"]=preventDefault;
+	
+	/**
+	获取事件的事件源
+	*/
+	function getTarget( eventObject){
+		eventObject=eventObject||getEventObject(eventObject);	
+		//             w3c                ie
+		var target=eventObject.target||eventObject.srcElement;
+		//如果目标是一个文本节点的话，在safari中重新指定target到父节点上. 
+		if( target.nodeType==yc.node.TEXT_NODE){
+			target=node.parentNode;	
+		}
+		return target;
+	}
+	window["yc"]["getTarget"]=getTarget;
+	
+	/**
+	* 确定按下的按钮
+	*/
+	function getMouseButton(  eventObject ){
+		eventObject=eventObject|| getEventObject( eventObject );
+		//初始化按钮的属性
+		var buttons={
+			'left':false,
+			'middle':false,
+			'right':false	
+		};
+		//检测eventObject的toString方法的返回值，w3c的dom对象的返回值为 MouseEvent
+		if( eventObject.toString&&eventObject.toString().indexOf( 'MouseEvent')!=-1 ){
+				//w3c方法
+				switch( eventObject.button){
+					case 0: buttons.left=true; break;
+					case 1: buttons.middle=true;break;
+					case 2: buttons.right=true;  break;
+					default: break;	
+				}
+		}else if( eventObject.button){
+			// MSIE method
+			switch(eventObject.button) {
+				case 1: buttons.left = true; break;
+				case 2: buttons.right = true; break;
+				case 3:
+					buttons.left = true;
+					buttons.right = true;
+				break;
+				case 4: buttons.middle = true; break;
+				case 5:
+					buttons.left = true;
+					buttons.middle = true;
+				break;
+				case 6:
+					buttons.middle = true;
+					buttons.right = true;
+				break;
+				case 7:
+					buttons.left = true;
+					buttons.middle = true;
+					buttons.right = true;
+				break;
+				default: break;
+			}	
+		}else{
+			return false;	
+		}
+		return buttons;
+	}
+	window['yc']['getMouseButton']=getMouseButton;
+	
+/**
+ * 获取文档中指针的位置
+ */
+function getPointerPositionInDocument(eventObject) {
+    eventObject = eventObject || getEventObject(eventObject);
+    var x = eventObject.pageX || (eventObject.clientX +
+        (document.documentElement.scrollLeft || document.body.scrollLeft));
+    var y= eventObject.pageY || (eventObject.clientY +
+        (document.documentElement.scrollTop || document.body.scrollTop));
+    return {'x':x,'y':y};
+}
+window['yc']['getPointerPositionInDocument'] = getPointerPositionInDocument;
 
+/**
+ * 获取按键及值
+ */
+function getKeyPressed(eventObject) {
+    eventObject = eventObject || getEventObject(eventObject);
+    var code = eventObject.keyCode;
+    var value = String.fromCharCode(code);
+    return {'code':code,'value':value};
+}
+window['yc']['getKeyPressed'] = getKeyPressed;
 ///////////////////////////////////////////////////////////////////////////////////////////
 //========================================界面的操作======================================
 ///////////////////////////////////////////////////////////////////////////////////////////
+
+	/**
+	获取窗口大小
+	*/
+    function getBrowserWindowSize(){
+		var doc=document.documentElement;
+		//在不同的浏览器中的获取方式	
+		//在strict mode中ie:  document.documentElement.clientWidth
+		//在quirks mode中ie:  document.body.clientWidth
+		//其它: window.innnerWidth
+		return {
+				'width':(window.innerWidth||(doc&&doc.clientWidth)||document.body.client.clientWidth),
+				'height':(window.innnerHeight||(doc&&doc.clientHeight)||document.body.clientHeight)
+			}
+		
+	};
+	window["yc"]["getBrowserWindowSize"]=getBrowserWindowSize;
+
 
 	//添加一个显示与隐藏的开关
 	function toggleDisplay(node,value){
@@ -206,6 +348,42 @@
 		ele.movement=setTimeout(repeat,interval);
 	}
 	window["yc"]["moveElement"]=moveElement;
+	
+	
+///////////////////////////////////////////////////////////////////////////////////////////
+//========================================节点的操作======================================
+///////////////////////////////////////////////////////////////////////////////////////////	
+/**
+节点类型的常量设定
+*/
+window['yc']['node']={
+	ELEMENT_NODE                : 1,
+    ATTRIBUTE_NODE              : 2,
+    TEXT_NODE                   : 3,
+    CDATA_SECTION_NODE          : 4,
+    ENTITY_REFERENCE_NODE       : 5,
+    ENTITY_NODE                 : 6,
+    PROCESSING_INSTRUCTION_NODE : 7,
+    COMMENT_NODE                : 8,
+    DOCUMENT_NODE               : 9,
+    DOCUMENT_TYPE_NODE          : 10,
+    DOCUMENT_FRAGMENT_NODE      : 11,
+    NOTATION_NODE               : 12
+};	
+
+/**
+ * 递归节点下所有的子节点
+ */
+function walkTheDom(node, func) {
+    func(node);
+    node = node.firstChild;
+    while (node) {
+         walkTheDom(node, func);
+         node = node.nextSibling;
+    }
+}
+window['yc']['walkTheDom'] = walkTheDOM;
+	
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 //========================================样式表的操作======================================
